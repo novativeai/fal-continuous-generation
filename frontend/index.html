@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Novative AI System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #111111;
+            --container-bg: #1d1d1f;
+            --accent-primary: #0071e3;
+            --accent-secondary: #30e8bf;
+            --text-primary: #f5f5f7;
+            --text-secondary: #a1a1a6;
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            display: grid;
+            place-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            overflow: hidden;
+        }
+        .container {
+            text-align: center;
+            background: var(--container-bg);
+            padding: 48px;
+            border-radius: 24px;
+            border: 1px solid var(--border-color);
+            width: 90%;
+            max-width: 640px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .container::before {
+            content: ''; position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: -1; margin: -2px; border-radius: inherit; background: conic-gradient(from 180deg at 50% 50%, var(--accent-secondary), var(--accent-primary), var(--accent-secondary)); opacity: 0; transform: scale(0.95); transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1); animation: spin-border 4s linear infinite paused;
+        }
+        @keyframes spin-border { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        h1 { margin-top: 0; margin-bottom: 24px; font-weight: 700; font-size: 2.5rem; color: var(--text-primary); letter-spacing: -1px; }
+        .ai-text { display: inline-block; background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: scanline 3s linear infinite paused; }
+        @keyframes scanline { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-1px) scale(0.99); } }
+        
+        .input-group {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        #prompt, #imageSize {
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            background-color: #2c2c2e;
+            color: var(--text-primary);
+            font-size: 1rem;
+            box-sizing: border-box; /* Important for consistent sizing */
+            transition: all 0.3s ease;
+        }
+        #prompt:focus, #imageSize:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.3);
+        }
+        #prompt:disabled, #imageSize:disabled {
+            background-color: #3a3a3c;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        
+        #imageSize {
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a1a1a6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1em;
+        }
+        
+        .button-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; justify-content: center; margin-top: 16px; }
+        button { padding: 14px 20px; border: none; border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease; }
+        #folderBtn { background-color: #3a3a3c; color: var(--text-primary); }
+        #startBtn { background: var(--accent-primary); color: white; box-shadow: 0 5px 15px rgba(0, 113, 227, 0.2); }
+        #endBtn { background-color: #3a3a3c; color: var(--text-secondary); }
+        button:hover:not(:disabled) { transform: translateY(-2px); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        #folderPath { margin-top: 16px; font-size: 0.8rem; color: var(--text-secondary); min-height: 16px; word-break: break-all; }
+        #status { margin-top: 24px; font-size: 1rem; min-height: 24px; color: var(--text-secondary); display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .loader { width: 20px; height: 20px; border: 3px solid var(--border-color); border-top-color: var(--accent-secondary); border-radius: 50%; animation: spin-loader 1s linear infinite; }
+        @keyframes spin-loader { to { transform: rotate(360deg); } }
+        .container.session-active { transform: scale(1.02); box-shadow: 0 25px 60px rgba(0,0,0,0.4); }
+        .container.session-active::before { opacity: 1; transform: scale(1); animation-play-state: running; }
+        .container.session-active .ai-text { animation-play-state: running; }
+        .container.session-shutdown { animation: shutdown-flash 0.5s ease-out; }
+        @keyframes shutdown-flash { 0% { transform: scale(1.02); } 50% { transform: scale(1.03); filter: brightness(1.5); } 100% { transform: scale(1); filter: brightness(1); } }
+    </style>
+</head>
+<body>
+    <div class="container" id="app-container">
+        <h1>Novative <span class="ai-text">AI</span> System</h1>
+        
+        <div class="input-group">
+            <input type="text" id="prompt" placeholder="Enter your creative prompt here...">
+            <select id="imageSize" name="image_size">
+                <option value="square_hd">Square HD</option>
+                <option value="square" selected>Square</option>
+                <option value="portrait_3_4">Portrait 3:4</option>
+                <option value="portrait_9_16">Portrait 9:16</option>
+                <option value="landscape_4_3">Landscape 4:3</option>
+                <option value="landscape_16_9">Landscape 16:9</option>
+            </select>
+        </div>
+
+        <div id="folderPath">No download folder selected.</div>
+        <div class="button-group">
+            <button id="folderBtn">Select Folder</button>
+            <button id="startBtn">Start Session</button>
+            <button id="endBtn" disabled>End Session</button>
+        </div>
+        <div id="status">System idle. Ready to generate.</div>
+    </div>
+
+    <script>
+        const appContainer = document.getElementById('app-container');
+        const promptInput = document.getElementById('prompt');
+        const imageSizeSelect = document.getElementById('imageSize'); // Get the new select element
+        const folderBtn = document.getElementById('folderBtn');
+        const folderPathDiv = document.getElementById('folderPath');
+        const startBtn = document.getElementById('startBtn');
+        const endBtn = document.getElementById('endBtn');
+        const statusDiv = document.getElementById('status');
+
+        let isSessionActive = false;
+        let directoryHandle = null;
+        const API_URL = 'https://fal-continuous-generation-production.up.railway.app/api/generate-image';
+
+        if (!('showDirectoryPicker' in window)) {
+            folderBtn.disabled = true;
+            folderPathDiv.textContent = 'Folder picker not supported by your browser.';
+            folderPathDiv.style.color = '#ff453a';
+        }
+
+        folderBtn.addEventListener('click', async () => {
+            try {
+                directoryHandle = await window.showDirectoryPicker();
+                folderPathDiv.textContent = `Saving to: ${directoryHandle.name}`;
+                folderPathDiv.style.color = 'var(--accent-secondary)';
+                updateStatus('Folder selected. Ready to start session.');
+            } catch (err) {
+                console.error('Folder picker cancelled.', err);
+                updateStatus('Folder selection cancelled.', 'error');
+            }
+        });
+
+        startBtn.addEventListener('click', async () => {
+            if (!directoryHandle) {
+                updateStatus('Please select a download folder first.', 'error');
+                return;
+            }
+            const promptText = promptInput.value.trim();
+            const imageSize = imageSizeSelect.value; // Get the selected image size
+            if (!promptText) {
+                updateStatus('Please provide a prompt to begin.', 'error');
+                return;
+            }
+            await startSession(promptText, imageSize);
+        });
+
+        endBtn.addEventListener('click', () => endSession());
+
+        async function startSession(prompt, imageSize) {
+            isSessionActive = true;
+            toggleControls(true);
+            appContainer.classList.add('session-active');
+            
+            updateStatus('Scanning directory...', 'loading');
+            const baseFilename = getBaseFilename(prompt);
+            const lastCounter = await findStartingCounter(directoryHandle, baseFilename);
+            
+            generateAndDownloadLoop(prompt, imageSize, baseFilename, lastCounter + 1);
+        }
+
+        function endSession() {
+            isSessionActive = false;
+            appContainer.classList.remove('session-active');
+            appContainer.classList.add('session-shutdown');
+            setTimeout(() => appContainer.classList.remove('session-shutdown'), 500);
+            toggleControls(false);
+            updateStatus('System idle. Session terminated.');
+        }
+
+        function toggleControls(sessionRunning) {
+            promptInput.disabled = sessionRunning;
+            imageSizeSelect.disabled = sessionRunning; // Disable the select dropdown
+            startBtn.disabled = sessionRunning;
+            folderBtn.disabled = sessionRunning;
+            endBtn.disabled = !sessionRunning;
+        }
+
+        function updateStatus(message, type = 'info') {
+            let content = message;
+            if (type === 'loading') {
+                content = `<div class="loader"></div><span>${message}</span>`;
+            }
+            statusDiv.innerHTML = content;
+            statusDiv.style.color = type === 'error' ? '#ff453a' : 'var(--text-secondary)';
+        }
+
+        function getBaseFilename(prompt) {
+            const stopWords = new Set(['a', 'an', 'the', 'in', 'on', 'at', 'for', 'with', 'of', 'by']);
+            const words = prompt.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/).filter(word => word);
+            for (const word of words) {
+                if (!stopWords.has(word)) return word;
+            }
+            return 'image';
+        }
+
+        async function findStartingCounter(dirHandle, baseFilename) {
+            let highestCounter = 0;
+            const regex = new RegExp(`^${baseFilename}_novative_ai_(\\d+)\\.png$`);
+            for await (const entry of dirHandle.values()) {
+                if (entry.kind === 'file') {
+                    const match = entry.name.match(regex);
+                    if (match) {
+                        const counter = parseInt(match[1], 10);
+                        if (counter > highestCounter) { highestCounter = counter; }
+                    }
+                }
+            }
+            return highestCounter;
+        }
+
+        async function generateAndDownloadLoop(prompt, imageSize, baseFilename, startCounter) {
+            let counter = startCounter;
+            while (isSessionActive) {
+                try {
+                    updateStatus(`Generating image ${counter}...`, 'loading');
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            prompt: prompt,
+                            image_size: imageSize // Send the image size in the request body
+                        })
+                    });
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || 'Network error');
+                    }
+                    const data = await response.json();
+                    if (!isSessionActive) break;
+
+                    const filename = `${baseFilename}_novative_ai_${counter}.png`;
+                    updateStatus(`Saving '${filename}'...`, 'info');
+                    await downloadImage(data.url, filename);
+                    counter++;
+                } catch (error) {
+                    console.error('Generation failed:', error);
+                    updateStatus(`Error: ${error.message}. Halting session.`, 'error');
+                    endSession();
+                    break;
+                }
+            }
+        }
+        
+        async function downloadImage(url, filename) {
+            if (!directoryHandle) throw new Error("Download directory not specified.");
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`Network response error`);
+                const blob = await response.blob();
+                const fileHandle = await directoryHandle.getFileHandle(filename, { create: true });
+                const writable = await fileHandle.createWritable();
+                await writable.write(blob);
+                await writable.close();
+            } catch (error) {
+                console.error("Failed to save the image:", error);
+                throw error;
+            }
+        }
+    </script>
+</body>
+</html>```

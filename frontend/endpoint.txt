@@ -1,0 +1,1 @@
+https://fal-continuous-generation-production.up.railway.app/api/generate-image
