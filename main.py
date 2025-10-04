@@ -60,7 +60,7 @@ async def generate_single_image(request: GenerateRequest):
     try:
         # --- Pass the image_size argument to the Fal AI model ---
         result = fal_client.run(
-            "fal-ai/flux-1-schnell",
+            "fal-ai/flux-1/schnell",
             arguments={
                 "prompt": request.prompt,
                 "image_size": request.image_size
