@@ -1,7 +1,7 @@
 import os
 import uuid
 import logging
-from typing import Optional
+from typing import Optional, Union, Dict
 
 # Third-party libraries
 import fal_client
@@ -16,7 +16,7 @@ FAL_KEY = os.environ.get("FAL_KEY")
 app = FastAPI(
     title="Novative AI System API",
     description="An API that generates a single image using Fal AI and returns its URL.",
-    version="1.6.0" # Version bump for image size feature
+    version="1.7.0" # Version bump for custom width/height
 )
 
 # --- CORS Configuration ---
@@ -37,9 +37,16 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # --- Pydantic Models ---
+
+# New model for the custom width/height object
+class CustomImageSize(BaseModel):
+    width: int
+    height: int
+
 class GenerateRequest(BaseModel):
     prompt: str = Field(..., description="The text prompt to generate an image from.")
-    image_size: str = Field(default="square", description="The desired image size/aspect ratio.")
+    # The image_size can now be a string OR our new CustomImageSize object
+    image_size: Union[str, CustomImageSize] = Field(default="square", description="The desired image size/aspect ratio.")
 
 class GenerateResponse(BaseModel):
     id: str
@@ -58,14 +65,20 @@ async def generate_single_image(request: GenerateRequest):
     logger.info(f"Received request for prompt: '{request.prompt}' with size: '{request.image_size}' (ID: {attempt_id})")
     
     try:
-        # --- Pass the image_size argument to the Fal AI model ---
+        # Prepare the payload for fal_client
+        payload = {
+            "prompt": request.prompt,
+            # Pydantic automatically parses the JSON into the correct type (str or CustomImageSize)
+            # We use .model_dump() for the object to convert it to a dict for the API call
+            "image_size": request.image_size if isinstance(request.image_size, str) else request.image_size.model_dump()
+        }
+
+        # --- CORRECTED model name and pass the dynamic payload ---
         result = fal_client.run(
-            "fal-ai/flux-1/schnell",
-            arguments={
-                "prompt": request.prompt,
-                "image_size": request.image_size
-            }
+            "fal-ai/flux-1/schnell", # Corrected model path
+            arguments=payload
         )
+
         if not isinstance(result, dict) or "images" not in result:
              raise ValueError(f"Unexpected response format from Fal AI API: {result}")
         images = result["images"]

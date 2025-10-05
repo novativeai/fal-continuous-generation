@@ -227,7 +227,7 @@
 
         async function findStartingCounter(dirHandle, baseFilename) {
             let highestCounter = 0;
-            const regex = new RegExp(`^${baseFilename}_novative_ai_(\\d+)\\.png$`);
+            const regex = new RegExp(`^${baseFilename}_(\\d+)\\.png$`);
             for await (const entry of dirHandle.values()) {
                 if (entry.kind === 'file') {
                     const match = entry.name.match(regex);
@@ -260,7 +260,7 @@
                     const data = await response.json();
                     if (!isSessionActive) break;
 
-                    const filename = `${baseFilename}_novative_ai_${counter}.png`;
+                    const filename = `${baseFilename}_${counter}.png`;
                     updateStatus(`Saving '${filename}'...`, 'info');
                     await downloadImage(data.url, filename);
                     counter++;
